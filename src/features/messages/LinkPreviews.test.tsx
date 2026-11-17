@@ -126,6 +126,50 @@ it("lets a card open its plugin's own target while its link opens as before", ()
   expect(openTarget).toHaveBeenCalledTimes(1);
 });
 
+it("closes a card's opener once its contribution is removed or outside a conversation", () => {
+  const results: boolean[] = [];
+  const Card = ({ opener }: LinkPreviewProps) => (
+    <button
+      type="button"
+      onClick={() =>
+        results.push(opener?.open("example-panel:item/7") ?? false)
+      }
+    >
+      Open panel
+    </button>
+  );
+  const openTarget = vi.fn(() => true);
+  const live = [entry("item", () => true, 0, Card)];
+  const { unmount } = render(
+    <TargetOpenerProvider canOpen={() => true} open={openTarget}>
+      <LinkPreviews
+        urls={["https://item.example/7"]}
+        messageId="m"
+        registry={reader(live)}
+        onOpenLink={() => true}
+      />
+    </TargetOpenerProvider>,
+  );
+  const button = screen.getByRole("button", { name: "Open panel" });
+  fireEvent.click(button);
+  live.length = 0;
+  fireEvent.click(button);
+  expect(results).toEqual([true, false]);
+  expect(openTarget).toHaveBeenCalledTimes(1);
+  unmount();
+
+  render(
+    <LinkPreviews
+      urls={["https://item.example/7"]}
+      messageId="m"
+      registry={reader([entry("item", () => true, 0, Card)])}
+      onOpenLink={() => true}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Open panel" }));
+  expect(results).toEqual([true, false, false]);
+});
+
 it("drops a card whose renderer throws and keeps the rest", () => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   const Broken = () => {
