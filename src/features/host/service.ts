@@ -209,6 +209,12 @@ export interface Host {
   ): Promise<McpPairing | null>;
   denyMcpAuthorization?(request: McpAuthorization): Promise<void>;
   runCommand(id: string, input?: string): Promise<string | null>;
+  /** Counts one `event` for a plugin whose manifest declares `host.usage`.
+   * Names are 1–40 lowercase letters, digits and underscores, starting with a
+   * letter; another throws. Buzz adds the plugin's id and revision and hands
+   * the counts to the build's usage command, if any, once a minute. Never
+   * waits or fails otherwise. Desktop only. */
+  recordUsage?(event: string): void;
   /** Starts a process the manifest declares in `host.processes`. It lives until
    * it exits, is killed, or the plugin unloads. Desktop only. */
   spawn?: (id: string, options?: HostProcessOptions) => Promise<HostProcess>;
@@ -358,6 +364,7 @@ export async function prepareRemoteAgentAuthorization(
   return tag;
 }
 
+const USAGE_EVENT = /^[a-z][a-z0-9_]{0,39}$/;
 type CallContext = Readonly<{ boot: string; page: number }>;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const callContexts = new WeakMap<
@@ -391,6 +398,20 @@ export class HostService extends Service implements Host {
     } catch {
       return null;
     }
+  }
+
+  recordUsage(event: string): void {
+    if (!USAGE_EVENT.test(event))
+      throw new TypeError(
+        "Usage events are 1–40 lowercase letters, digits and underscores, starting with a letter",
+      );
+    const owner = this.ctx.pluginOwner;
+    if (!owner || !isTauri()) return;
+    invoke("plugin_host_record_usage", {
+      id: owner.id,
+      revision: owner.revision,
+      event,
+    }).catch(() => {});
   }
 
   // A method, not a field: `this.ctx` is then the calling plugin's scope.

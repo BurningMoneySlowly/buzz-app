@@ -42,6 +42,7 @@ export const manifest: PluginManifest = {
     managedFiles: true,
     publicImages: true,
     publicPages: true,
+    usage: true,
   },
 };
 const ExampleSidebar = ({ target, children }: PageSidebarProps) => {
@@ -94,6 +95,7 @@ export function apply(ctx: Context) {
   const host: Host = ctx.host;
   const upload: HostByteUpload = { url: "https://api.example.com/upload", field: "image", name: "image.png", contentType: "image/png" };
   void host.uploadBytesOnce?.(new Uint8Array([1]), upload, { callId: crypto.randomUUID() });
+  host.recordUsage?.("panel_opened");
   const tool: AddedTool = { name: "example_image", description: "Read an image", inputSchema: {},
     async call(client: BuzzClient, context: AddedToolContext): Promise<AddedToolReply> {
       void [context.channel, context.root, context.topLevel, context.wholeChannel];

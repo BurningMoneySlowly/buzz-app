@@ -240,6 +240,24 @@ it("discloses public page reads and that only preview fields come back", async (
     expect(screen.getByText(/returns only its preview fields/)).toBeVisible(),
   );
 });
+it("discloses usage counts, and only when declared", async () => {
+  const usage = (granted: boolean): PluginManifest => ({
+    ...manifest(false),
+    host: { usage: granted },
+  });
+  const { unmount } = render(<PluginAccessReview manifest={usage(false)} />);
+  expect(
+    screen.queryByRole("button", { name: /Count how often you use it/ }),
+  ).toBeNull();
+  unmount();
+  render(<PluginAccessReview manifest={usage(true)} />);
+  fireEvent.click(
+    screen.getByRole("button", { name: /Count how often you use it/ }),
+  );
+  await waitFor(() =>
+    expect(screen.getByText(/not your\s+messages or files/)).toBeVisible(),
+  );
+});
 it("shows no public page access when it isn't declared", () => {
   render(<PluginAccessReview manifest={publicPages(false)} />);
   expect(

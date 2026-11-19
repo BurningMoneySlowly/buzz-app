@@ -1822,6 +1822,11 @@ tab, asks **Discard changes?** first; **Keep editing** keeps them.
   from a different publisher, waits for your review instead. A plugin you
   remove is not installed again automatically; it stays under
   **Recommended** if you want it back.
+- A plugin's access review can list **Count how often you use it**. That
+  plugin may count named events, such as a panel opening, for whoever
+  distributes your build of Buzz. Only event names and counts are sent, never
+  messages or files, and only if your build names a program to collect them;
+  most builds do not.
 - **Bestie** starts on, and **Reminders** and **Workflows** start off, on fresh
   local installs. Upgrades preserve their previous state, including Bestie off
   when no choice was saved. Enable or disable them in **Manage plugins**; saved

@@ -6,6 +6,7 @@ import type { PluginManifest } from "../plugins/api";
 import { Accordion } from "../shared/design-system/ui/Accordion";
 import { Button } from "../shared/design-system/ui/Button";
 import {
+  ChartBarIcon,
   GlobeIcon,
   FolderOpenIcon,
   PlugIcon,
@@ -149,6 +150,28 @@ function hostDeclarations(
                 public addresses, such as those reached through a company VPN,
                 so the plugin has to refuse those itself. Sites see your IP
                 address.
+              </p>
+            ),
+          },
+        ]
+      : []),
+    ...(manifest.host?.usage
+      ? [
+          {
+            key: "usage",
+            signature:
+              "Usage counts: named events counted per minute · to this build's usage command, if any",
+            title: "Usage counts:",
+            label: "Count how often you use it",
+            hint: "The plugin can count named events, such as a panel opening, for whoever distributes this build of Buzz.",
+            icon: ChartBarIcon,
+            details: (
+              <p className="m-0">
+                Buzz counts each event the plugin names, adds the plugin's ID
+                and installed revision, and a minute after the first count hands
+                the counts to the program this build of Buzz names for them.
+                Only short event names and counts go with them, not your
+                messages or files. A build without that program keeps no counts.
               </p>
             ),
           },

@@ -15,6 +15,7 @@ Build defaults are readable binary data, **never secret storage**.
 | `BUZZ_BUILD_REPOSITORY_ACCESS` | Native build: default [repository access rules](repository-access.md#default-rules), in `repository-access.json`'s schema. Unset means none. |
 | `BUZZ_DEFAULT_COMMUNITY_URL` | Packaged frontend build: secure relay origin to select once, after identity setup, only when this viewer has no saved community record. Saved choices, including Personal space, always win. Unset in OSS builds. |
 | `BUZZ_BUILD_MANAGED_PLUGINS_URL` | Native build: `https` URL of a version 1 [managed plugin policy](managed-plugins.md#packaged-policy). The desktop app fetches it and keeps the last good copy, used when no `managed-plugins.json` exists. It only recommends. Unset in OSS builds. |
+| `BUZZ_BUILD_PLUGIN_USAGE_COMMAND` | Native build: JSON array of the program and arguments that receive the usage counts of plugins declaring `host.usage`. Unset, the OSS default, leaves usage counting off. See [Plugin usage command](#plugin-usage-command). |
 | `BUZZ_DATABRICKS_HOST` | Frontend build and dev server: `https://` Databricks workspace URL passed as `DATABRICKS_HOST` to every bundled `goose-acp`, which then prefers it to the host in goose's config. Unset in OSS builds. See [Databricks host](#databricks-host). |
 | `BUZZ_AGENT_GATEWAY` | Shared frontend/native build, process environment only: non-secret agent gateway deployment descriptor (version 2: gateway origin, exact community IDs/origins, access check path, context header profile and per-harness upstream bases). Unset, the release default, leaves gateway routing off. See [Agent gateway](#agent-gateway). |
 | `BUZZ_MOBILE_APP_IOS_URL`, `BUZZ_MOBILE_APP_ANDROID_URL` | Frontend build: `https://` store listings for the build's mobile app, shown with QR codes on the mobile Settings card to people whose Builderlab account holds this device's backed-up key. Unset in OSS builds. See [Mobile app links](#mobile-app-links). |
@@ -71,6 +72,43 @@ records and unresolvable aliases. A later build default cannot change that saved
 choice. Selection starts the normal authenticated relay session; it grants no
 membership or admission bypass. If the relay refuses admission or is offline,
 the normal connection error/retry flow applies. No legacy preferences are copied.
+
+## Plugin usage command
+
+A distributor that wants to know how its plugins are used names a local
+program to receive their usage counts:
+
+```sh
+BUZZ_BUILD_PLUGIN_USAGE_COMMAND='["example-usage","record"]' bin/pnpm tauri build
+```
+
+The native build reads it from the build process environment or repository-root
+`.env.local`. It must be a JSON array of a program and at most 31 arguments,
+each 1–1024 bytes without NUL; anything else fails the build. It is compiled
+into the app, so a launched app's environment cannot change it. Leave it unset
+for OSS builds: without it `ctx.host.recordUsage` counts nothing.
+
+Buzz runs the program as it runs a plugin's host command: no shell, a 5 s
+deadline, and the app's environment plus, on macOS, the login shell's PATH and
+variables other than Buzz's own. Its stdout is ignored but must stay under
+4 KiB of UTF-8, or the run counts as failed. A minute after a plugin records its first event, it writes every
+count since then to the program's stdin and closes it:
+
+```json
+{"version":1,"events":[{"plugin":"example.notes","revision":"<installed revision>","event":"note_opened","count":3}]}
+```
+
+Buzz fills in `plugin` and `revision` from the calling plugin's scope, not from
+anything the plugin passes, and counts only for an installed, enabled plugin at
+that revision whose manifest declares `host.usage`. As with every host grant,
+this is not isolation: plugins share the main WebView, so a malicious one could
+invoke the native command naming another such plugin. `revision` is the
+installed artifact's revision, or `bundled` for a plugin built into Buzz,
+whose counts the program tells apart by Buzz release itself. The program decides where counts
+go and who the person is, if anything does. A non-zero exit, a timeout or
+quitting Buzz drops that minute's counts; Buzz never retries or saves them. See
+[plugin architecture](plugin-architecture.md#usage-counts) for what plugins can
+record.
 
 ## Databricks host
 

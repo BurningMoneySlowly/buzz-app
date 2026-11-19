@@ -80,6 +80,9 @@ export type PluginManifest = Readonly<{
      * and icon a public HTTPS page names in its head, one hop at a time with
      * no cookies. The page itself never comes back. */
     publicPages?: boolean;
+    /** `host.recordUsage` may count named events. Buzz hands the counts, never
+     * any content, to the usage command the build names, if any. */
+    usage?: boolean;
   }>;
 }>;
 // Module evaluation must be pure. apply owns resources through ctx.effect.

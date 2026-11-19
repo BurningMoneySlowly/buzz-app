@@ -17,6 +17,7 @@ mod nsec_backup_config;
 #[cfg_attr(test, allow(dead_code))]
 fn main() {
     configure_nsec_backup();
+    configure_plugin_usage();
     configure_federated_identity();
     configure_enterprise_auth();
     // Release builds enable the updater only when both values are supplied; its
@@ -179,6 +180,7 @@ fn main() {
             "plugin_module",
             "plugin_recover",
             "plugin_host_run_command",
+            "plugin_host_record_usage",
             "plugin_host_call_context",
             "plugin_host_request",
             "plugin_host_request_bytes",
@@ -326,6 +328,44 @@ fn configure_enterprise_auth() {
     }
 }
 
+const PLUGIN_USAGE: &str = "BUZZ_BUILD_PLUGIN_USAGE_COMMAND";
+
+fn configure_plugin_usage() {
+    println!("cargo:rerun-if-env-changed={PLUGIN_USAGE}");
+    let local = std::path::PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap())
+        .join("../.env.local");
+    println!("cargo:rerun-if-changed={}", local.display());
+    let values = build_env::load(&local, &[PLUGIN_USAGE], |key| std::env::var(key).ok())
+        .unwrap_or_else(|error| panic!("{error}"));
+    let command = plugin_usage_command(values.get(PLUGIN_USAGE).map(String::as_str))
+        .unwrap_or_else(|error| panic!("{error}"));
+    if let Some(command) = command {
+        println!("cargo:rustc-env={PLUGIN_USAGE}={command}");
+    }
+}
+
+/// The program and arguments plugins' usage counts go to, as a JSON array of
+/// strings. Empty or unset leaves usage recording off.
+fn plugin_usage_command(raw: Option<&str>) -> Result<Option<String>, String> {
+    let raw = raw.map(str::trim).unwrap_or("");
+    if raw.is_empty() {
+        return Ok(None);
+    }
+    let invalid = || {
+        format!("{PLUGIN_USAGE} must be a JSON array of a program and at most 31 arguments, each 1–1024 bytes without NUL")
+    };
+    let argv: Vec<String> = serde_json::from_str(raw).map_err(|_| invalid())?;
+    if argv.is_empty()
+        || argv.len() > 32
+        || argv
+            .iter()
+            .any(|value| value.is_empty() || value.len() > 1024 || value.contains('\0'))
+    {
+        return Err(invalid());
+    }
+    Ok(Some(serde_json::to_string(&argv).expect("strings")))
+}
+
 const FEDERATED_IDENTITY: &str = "BUZZ_BUILD_FEDERATED_IDENTITY_CONFIG";
 
 fn configure_federated_identity() {
@@ -382,6 +422,26 @@ fn federated_identity_servers(
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn plugin_usage_command_is_a_json_program_and_arguments() {
+        let command = super::plugin_usage_command;
+        assert_eq!(command(None), Ok(None));
+        assert_eq!(command(Some("  ")), Ok(None));
+        assert_eq!(
+            command(Some(r#" ["example-usage", "record"] "#)),
+            Ok(Some(r#"["example-usage","record"]"#.into()))
+        );
+        for invalid in [
+            "example-usage record",
+            "[]",
+            r#"[""]"#,
+            r#"["example-usage", 1]"#,
+            r#"["example-usage", "a\u0000b"]"#,
+        ] {
+            assert!(command(Some(invalid)).is_err(), "{invalid}");
+        }
+    }
+
     /// Tauri's metadata in each build mode: `tauri dev` builds without
     /// `custom-protocol`; `tauri build`, `--debug` or not, builds with it.
     #[test]

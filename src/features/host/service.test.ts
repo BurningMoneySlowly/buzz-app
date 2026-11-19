@@ -186,6 +186,23 @@ it("keeps native command failures and browser calls nullable", async () => {
   expect(invoke).toHaveBeenCalledTimes(1);
 });
 
+it("records usage as the calling plugin without waiting or failing", async () => {
+  const { root, plugin } = pluginContext();
+  vi.mocked(invoke).mockRejectedValue(new Error("Usage is not declared"));
+  expect(plugin.host.recordUsage?.("panel_opened")).toBeUndefined();
+  expect(invoke).toHaveBeenCalledWith("plugin_host_record_usage", {
+    id: "example.plugin",
+    revision: "abc",
+    event: "panel_opened",
+  });
+  root.host.recordUsage?.("panel_opened");
+  vi.mocked(isTauri).mockReturnValue(false);
+  plugin.host.recordUsage?.("panel_opened");
+  expect(invoke).toHaveBeenCalledTimes(1);
+  for (const event of ["", "Panel", "2nd", "panel-opened", "a".repeat(41)])
+    expect(() => plugin.host.recordUsage?.(event)).toThrow(TypeError);
+});
+
 it("passes review decisions as stdin data while keeping the command fixed", async () => {
   const { plugin } = pluginContext();
   vi.mocked(invoke).mockResolvedValue('{"accepted":true}');

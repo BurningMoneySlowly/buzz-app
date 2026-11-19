@@ -98,6 +98,10 @@ pub struct HostGrants {
     /// HTTPS address, one hop at a time, with no cookies; never its HTML.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub public_pages: bool,
+    /// `recordUsage` may count named events, which Buzz hands to the usage
+    /// command the build names; never their content.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub usage: bool,
 }
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
@@ -2703,6 +2707,17 @@ mod tests {
         );
         pages["host"]["publicPages"] = serde_json::json!("true");
         assert!(serde_json::from_value::<Manifest>(pages).is_err());
+        assert!(!old.host.as_ref().unwrap().usage);
+        let mut usage = manifest.clone();
+        usage["host"]["usage"] = serde_json::json!(false);
+        let parsed: Manifest = serde_json::from_value(usage.clone()).unwrap();
+        assert_eq!(serde_json::to_value(&parsed).unwrap(), manifest);
+        usage["host"]["usage"] = serde_json::json!(true);
+        let parsed: Manifest = serde_json::from_value(usage.clone()).unwrap();
+        assert!(parsed.host.as_ref().unwrap().usage);
+        assert_eq!(serde_json::to_value(&parsed).unwrap(), usage);
+        usage["host"]["usage"] = serde_json::json!("true");
+        assert!(serde_json::from_value::<Manifest>(usage).is_err());
         for limit in [1, 4096, MAX_HOST_COMMAND_OUTPUT_BYTES] {
             let mut valid = manifest.clone();
             valid["host"]["commands"][0]["maxOutputBytes"] = serde_json::json!(limit);

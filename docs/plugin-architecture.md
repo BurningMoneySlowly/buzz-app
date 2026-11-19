@@ -2560,6 +2560,30 @@ immediately. These declarations help review and catch mistakes. Plugins share th
 main WebView and can invoke app commands directly, so the declarations do not
 isolate a malicious plugin. Load only trusted plugin code.
 
+### Usage counts
+
+Declare `host: { usage: true }` to let `recordUsage(event)` count how often
+something happens in the plugin, such as `panel_opened` or `request_approved`.
+Event names are 1–40 lowercase ASCII letters, digits and underscores, starting
+with a letter; any other name throws, so a typo shows up in development. The
+call returns at once, never fails otherwise, and is a no-op in the browser build
+and for a plugin that did not declare the grant.
+
+Native code (`src-tauri/src/host_usage.rs`) keeps counts in memory, keyed by the
+plugin's id and installed revision, which it takes from the caller's plugin
+scope, and the event name. It checks the grant against the installed manifest
+when an event is first counted in a window. A minute after the first count it hands all of them to the
+build's [usage command](configuration.md#plugin-usage-command) and starts over.
+A window keeps at most 32 distinct events per plugin and 128 in all; further
+new names are dropped until the next window, so one plugin cannot crowd out the
+others. A build with no usage command checks nothing and keeps nothing.
+
+Only names and counts leave Buzz: no arguments, text, identities or
+timestamps. Name events after what the person did, never after content, and
+keep the set small and fixed. The access review shows the grant as **Count how
+often you use it**, and adding it to an installed plugin is a change of host
+access, so a managed automatic update leaves it for the person's review.
+
 ### Loading from folders and repositories
 
 Authors can sign a built API v1 plugin with `buzzodz plugin sign DIST_DIRECTORY`

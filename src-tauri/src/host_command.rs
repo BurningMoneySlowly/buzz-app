@@ -155,7 +155,7 @@ pub(crate) mod windows_job {
     }
 }
 
-const DEADLINE: Duration = Duration::from_secs(5);
+pub(crate) const DEADLINE: Duration = Duration::from_secs(5);
 
 // Tokio kills only the direct child on future cancellation; the group also owns descendants.
 #[cfg(unix)]
@@ -492,7 +492,7 @@ pub(crate) fn resolve_program(program: &str, effective_path: &OsStr) -> PathBuf 
 /// Runs a declared host command with the app's environment, the login-shell
 /// variables `login_shell` forwards less any Buzz identity, as processes get
 /// them, and the composed PATH.
-async fn run_command(
+pub(crate) async fn run_command(
     command: &HostCommand,
     login_shell: &[(OsString, OsString)],
     input: Option<&str>,

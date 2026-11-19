@@ -45,6 +45,7 @@ mod host_forward;
 mod host_mcp;
 mod host_process;
 mod host_request;
+mod host_usage;
 mod mesh_compute;
 use mesh_compute::MeshHost;
 mod identity;
@@ -148,6 +149,7 @@ use host_request::{
     plugin_host_call_context, plugin_host_read_page, plugin_host_request,
     plugin_host_request_bytes, plugin_host_upload, plugin_host_upload_bytes_once, HostCalls,
 };
+use host_usage::plugin_host_record_usage;
 use notifications::{notification_show, Notifications};
 #[cfg(target_os = "macos")]
 use std::collections::HashMap;
@@ -836,6 +838,7 @@ fn commands<R: tauri::Runtime>() -> impl Fn(tauri::ipc::Invoke<R>) -> bool + Sen
         plugin_module,
         plugin_recover,
         plugin_host_run_command,
+        plugin_host_record_usage,
         plugin_host_call_context,
         plugin_host_request,
         plugin_host_request_bytes,
