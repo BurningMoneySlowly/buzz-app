@@ -2073,6 +2073,11 @@ cannot change or remove. A script or shell config can check for it to tell that
 it runs under Buzz; an agent's shell commands see it when its runtime passes its
 environment on, as Claude Code does.
 
+Every host command (`ctx.host.runCommand`) gets `BUZZ_PLUGIN_ID`, the manifest id
+of the plugin that ran it. The host sets it after dropping inherited `BUZZ_`
+variables, so a plugin cannot choose it, and a command such as a telemetry or
+audit CLI can trust it over anything the plugin writes to stdin.
+
 `mcp` supplies an app-held MCP session URL and headers. The bundled command
 helper initializes that session and supplies an agent-scoped `buzz` tool command
 to the worker. Agent identity, signing authority and tool authorization stay in
