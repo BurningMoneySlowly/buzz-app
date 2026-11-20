@@ -2075,8 +2075,11 @@ environment on, as Claude Code does.
 
 Every host command (`ctx.host.runCommand`) gets `BUZZ_PLUGIN_ID`, the manifest id
 of the plugin that ran it. The host sets it after dropping inherited `BUZZ_`
-variables, so a plugin cannot choose it, and a command such as a telemetry or
-audit CLI can trust it over anything the plugin writes to stdin.
+variables, so a plugin cannot set it through `runCommand`'s input or the
+inherited environment, and a command such as a telemetry or audit CLI should
+prefer it over an id the plugin writes to stdin. It is not proof of identity:
+plugin code is unsandboxed and can call `plugin_host_run_command` directly with
+another plugin's id. Treat it as the id of a well-behaved plugin.
 
 `mcp` supplies an app-held MCP session URL and headers. The bundled command
 helper initializes that session and supplies an agent-scoped `buzz` tool command
